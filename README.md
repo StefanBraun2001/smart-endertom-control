@@ -45,6 +45,12 @@ difficulty roll, spawn-placement validity) and replaces only:
 Once you've gone past the last night you've configured, spawning falls back
 to fully vanilla behavior (uncapped chance, 1-4 group size by difficulty).
 
+Optionally, it can also change **who a spawned Phantom is willing to
+attack** - vanilla Phantoms target any nearby player regardless of that
+player's own insomnia state; see "Neutral targeting" further down for the
+opt-in fix (off by default, so this is a pure add-on, not a default
+behavior change).
+
 ## Master switch
 
 The `spawn_phantoms` gamerule (`/gamerule spawn_phantoms true|false`) is
@@ -93,7 +99,10 @@ Global file, created with defaults on first run:
     { "chanceCap": 0.5, "maxGroupSize": 3 }
   ],
   "logToConsole": false,
-  "logToChat": false
+  "logToChat": false,
+  "neutralUntilEligible": false,
+  "dropTargetOnceIneligible": false,
+  "retaliateWhenAttacked": false
 }
 ```
 
@@ -112,6 +121,55 @@ Global file, created with defaults on first run:
   Both off by default since they'll spam their respective output at the
   mod's normal 1-2 minute spawn-attempt cadence per player once enabled -
   turn on whichever channel you actually want while tuning, then back off.
+- **`neutralUntilEligible`** / **`dropTargetOnceIneligible`** /
+  **`retaliateWhenAttacked`** (all default `false`): see "Neutral
+  targeting" below.
+
+### Neutral targeting
+
+By default, vanilla Phantoms don't care whose insomnia caused them to
+spawn - once spawned, they'll happily attack *any* nearby player, even one
+who sleeps every night. `neutralUntilEligible` fixes that:
+
+- **`neutralUntilEligible`** (default `false`) - the master switch for
+  this feature. When `false`, all Phantom targeting is 100% unmodified
+  vanilla and the two fields below are inert no matter what they're set
+  to. When `true`, a Phantom will only pick a player as a target if that
+  specific player has themselves crossed the configured `thresholdTicks` -
+  players who've been sleeping fine are simply invisible to its targeting
+  scan.
+- **`dropTargetOnceIneligible`** (default `false`, only meaningful when
+  `neutralUntilEligible` is `true`) - what happens if a Phantom is
+  mid-fight against an eligible player who then sleeps (resetting their
+  `timeSinceRest`)? `false` = it keeps fighting until the fight naturally
+  ends (target acquisition is a one-time check). `true` = it re-checks
+  eligibility every tick and disengages the instant the target becomes
+  ineligible.
+- **`retaliateWhenAttacked`** (default `false`, only meaningful when
+  `neutralUntilEligible` is `true`) - vanilla Phantoms have **no
+  hit-triggered retaliation at all** (unlike most hostile mobs, they have
+  no `HurtByTargetGoal` equivalent registered), so hitting one that isn't
+  already targeting you normally does nothing. With this on, a Phantom
+  that gets hit by an otherwise-ineligible player and doesn't currently
+  have a target will fight back - so "neutral" means defensive-neutral,
+  not "consequence-free punching bag." Only applies to Phantoms spawned
+  *after* this is turned on - goal registration happens once, when the
+  Phantom is created, so already-spawned Phantoms won't retroactively
+  pick it up.
+
+If you turn on both `dropTargetOnceIneligible` and `retaliateWhenAttacked`
+together: a Phantom that's actively retaliating against the specific
+player who hit it is exempted from the ineligibility drop-check, so
+retaliation doesn't immediately cancel itself out one tick after starting.
+Any *other*, opportunistically-scanned target is still dropped normally if
+they become ineligible.
+
+**Old config files keep working as-is.** These three fields (and any
+future ones) simply take their Java-side default (`false`) when absent
+from an existing JSON file, so upgrading the mod without touching your
+config reproduces exactly the same, unmodified vanilla-adjacent behavior
+you already had - nothing about existing setups changes unless you
+explicitly opt in.
 
 ### Getting plain vanilla behavior back
 
@@ -221,6 +279,25 @@ the global file and re-resolves scope (global vs. per-world) immediately -
 no server restart needed while you're tuning values, including toggling
 `configScope` itself. The config is also re-loaded automatically on every
 server start.
+
+## Opening the config file in-game (Singleplayer only)
+
+`/phantomtuner edit` opens the currently active config file (whichever one
+actually applies right now - global or per-world) in your system's default
+text editor - the same as double-clicking it in a file browser.
+
+This only works in **Singleplayer** - the command checks
+`server.isSingleplayer()` and refuses on a real dedicated server (a remote
+server has no local desktop session to open a file in for you; instead it
+replies with the file's path so you can edit it directly there).
+
+Tries `java.awt.Desktop` first, but falls back to shelling out to the OS's
+own opener (`start` on Windows, `open` on macOS, `xdg-open` on Linux) if
+that's unavailable - several Minecraft launchers run the client JVM in AWT
+headless mode, which makes `Desktop` entirely unusable even on a normal
+desktop session, so the fallback is the common case in practice, not an
+edge case. If even that fails, it prints the file's path instead of
+failing silently.
 
 ## Local difficulty's role (not modified by this mod)
 

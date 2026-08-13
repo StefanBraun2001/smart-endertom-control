@@ -5,8 +5,14 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.awt.Desktop;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Locale;
 
 public final class SmartPhantomControl implements ModInitializer {
 	public static final String MOD_ID = "smartphantomcontrol";
@@ -27,6 +33,52 @@ public final class SmartPhantomControl implements ModInitializer {
 							ctx.getSource().sendSuccess(
 									() -> Component.literal("[SmartPhantomControl] Config reloaded."), true);
 							return 1;
+						}))
+						.then(Commands.literal("edit").executes(ctx -> {
+							MinecraftServer server = ctx.getSource().getServer();
+							Path path = PhantomTuningConfig.getActivePath();
+							if (!server.isSingleplayer()) {
+								ctx.getSource().sendFailure(Component.literal(
+										"[SmartPhantomControl] /phantomtuner edit only works in Singleplayer. "
+												+ "Edit the file directly on the server: " + path));
+								return 0;
+							}
+							try {
+								openInFileEditor(path);
+								ctx.getSource().sendSuccess(
+										() -> Component.literal("[SmartPhantomControl] Opening " + path), true);
+								return 1;
+							} catch (IOException e) {
+								LOGGER.error("[SmartPhantomControl] Failed to open {}", path, e);
+								ctx.getSource().sendFailure(Component.literal(
+										"[SmartPhantomControl] Failed to open the file - edit it manually: " + path));
+								return 0;
+							}
 						}))));
+	}
+
+	/**
+	 * Many Minecraft launchers run the client JVM in AWT headless mode (to avoid
+	 * AWT/LWJGL window conflicts), which makes java.awt.Desktop entirely
+	 * unavailable even on a normal desktop session. Falls back to shelling out
+	 * to the OS's own "open with default application" mechanism instead - the
+	 * same thing double-clicking the file does, no AWT involved.
+	 */
+	private static void openInFileEditor(Path path) throws IOException {
+		if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
+			Desktop.getDesktop().open(path.toFile());
+			return;
+		}
+
+		String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+		ProcessBuilder processBuilder;
+		if (os.contains("win")) {
+			processBuilder = new ProcessBuilder("cmd.exe", "/c", "start", "", path.toString());
+		} else if (os.contains("mac")) {
+			processBuilder = new ProcessBuilder("open", path.toString());
+		} else {
+			processBuilder = new ProcessBuilder("xdg-open", path.toString());
+		}
+		processBuilder.start();
 	}
 }

@@ -3,6 +3,10 @@
 	"package": "eu.stefanbraun612.smartphantomcontrol.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
+		"MobTargetSelectorAccessor",
+		"PhantomAttackPlayerTargetGoalMixin",
+		"PhantomCanAttackInvoker",
+		"PhantomRegisterGoalsMixin",
 		"PhantomSpawnerAccessor",
 		"PhantomSpawnerMixin"
 	],

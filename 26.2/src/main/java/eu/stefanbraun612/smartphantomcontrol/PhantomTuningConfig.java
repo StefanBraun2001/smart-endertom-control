@@ -39,12 +39,18 @@ public final class PhantomTuningConfig {
 	private static final String PER_WORLD_FILE_NAME = "config.json";
 
 	private static volatile Data active = Data.defaults();
+	private static volatile Path activePath = GLOBAL_CONFIG_PATH;
 
 	private PhantomTuningConfig() {
 	}
 
 	public static Data get() {
 		return active;
+	}
+
+	/** The config file actually driving current behavior (global or per-world, whichever is active). */
+	public static Path getActivePath() {
+		return activePath;
 	}
 
 	public static synchronized void load(MinecraftServer server) {
@@ -61,15 +67,18 @@ public final class PhantomTuningConfig {
 							+ "created {} as a copy of the global config", worldConfigPath);
 				}
 				active = loadOrCreate(worldConfigPath, () -> global).sanitized();
+				activePath = worldConfigPath;
 				LOGGER.info("[SmartPhantomControl] Using PER-WORLD config: {} (thresholdTicks={}, tiers={})",
 						worldConfigPath, active.thresholdTicks, active.tiers.size());
 			} catch (IOException e) {
 				LOGGER.error("[SmartPhantomControl] Failed to set up per-world config at {}, "
 						+ "falling back to the global config for this session", worldConfigPath, e);
 				active = global;
+				activePath = GLOBAL_CONFIG_PATH;
 			}
 		} else {
 			active = global;
+			activePath = GLOBAL_CONFIG_PATH;
 			LOGGER.info("[SmartPhantomControl] Using GLOBAL config: {} (thresholdTicks={}, tiers={})",
 					GLOBAL_CONFIG_PATH, active.thresholdTicks, active.tiers.size());
 		}
@@ -105,6 +114,12 @@ public final class PhantomTuningConfig {
 		public boolean logToConsole = false;
 		/** Testing aid: sends the same line as an in-game chat message to the affected player on every insomnia roll. Off by default. */
 		public boolean logToChat = false;
+		/** Master switch for the three fields below. Off by default = pure vanilla Phantom AI, the other two are inert regardless of their value. */
+		public boolean neutralUntilEligible = false;
+		/** Only meaningful if neutralUntilEligible=true. false = a Phantom keeps fighting a target even if that player sleeps mid-fight; true = it re-checks every tick and disengages the instant the target becomes ineligible (except a target it's actively retaliating against - see retaliateWhenAttacked). */
+		public boolean dropTargetOnceIneligible = false;
+		/** Only meaningful if neutralUntilEligible=true. If true, a Phantom that gets hit by an otherwise-ineligible player and has no current target will fight back - restores vanilla's usual mob retaliation behavior, which Phantoms normally lack entirely. Only applies to Phantoms spawned after this is enabled (goal registration happens once, at spawn). */
+		public boolean retaliateWhenAttacked = false;
 
 		private static Data defaults() {
 			return new Data();
@@ -125,6 +140,9 @@ public final class PhantomTuningConfig {
 			copy.tiers = new ArrayList<>(this.tiers);
 			copy.logToConsole = this.logToConsole;
 			copy.logToChat = this.logToChat;
+			copy.neutralUntilEligible = this.neutralUntilEligible;
+			copy.dropTargetOnceIneligible = this.dropTargetOnceIneligible;
+			copy.retaliateWhenAttacked = this.retaliateWhenAttacked;
 			return copy;
 		}
 
