@@ -6,8 +6,13 @@ threshold, per-eligible-night spawn-chance caps and group-size caps,
 falling back to plain, uncapped vanilla behavior once the configured
 tiers run out.
 
-Current build: **A0.1** (first release), **MC 26.2 only**. Source:
+Current build: **A0.2**, **MC 26.2 only**. Source:
 [github.com/StefanBraun2001/smart-phantom-control](https://github.com/StefanBraun2001/smart-phantom-control).
+
+**Distribution: GitHub only.** Following a Modrinth rules change, this mod
+is no longer distributed there - grab jars from the
+[Releases](https://github.com/StefanBraun2001/smart-phantom-control/releases)
+page instead.
 
 ## Install
 
