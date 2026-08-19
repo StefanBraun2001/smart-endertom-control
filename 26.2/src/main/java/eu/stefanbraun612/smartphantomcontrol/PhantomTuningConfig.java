@@ -17,19 +17,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Loads/holds the active tuning data. The global file
- * (config/smartphantomcontrol.json) always exists and its "configScope"
- * field decides where the actual tuning values come from:
- * - "global": the global file's own fields are used directly.
- * - "per_world": <world-save>/smartphantomcontrol/config.json is used
- *   instead, created as a copy of the global file's fields the first time
- *   a given world is loaded under this scope. Switching back to "global"
- *   later leaves that per-world file untouched on disk (not deleted, not
- *   read) so switching back to "per_world" resumes it unchanged.
- * Re-resolved on every server start and on "/phantomtuner reload" - not
- * hot-reloaded automatically otherwise.
- */
+/** Loads/holds the active tuning data (global or per-world - see docs/GUIDE.md). */
 public final class PhantomTuningConfig {
 	private static final Logger LOGGER = LoggerFactory.getLogger("smartphantomcontrol");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -106,19 +94,19 @@ public final class PhantomTuningConfig {
 	}
 
 	public static final class Data {
-		/** "global" (default) uses this file's own fields; "per_world" uses a per-world copy instead - see class doc. */
+		/** "global" or "per_world" - see docs/GUIDE.md. */
 		public String configScope = "global";
 		public int thresholdTicks = 72000;
 		public List<NightTier> tiers = defaultTiers();
-		/** Testing aid: writes a line to the server log on every insomnia roll (chance, cap, group size). Off by default. */
+		/** Log every insomnia roll to the server console. Off by default. */
 		public boolean logToConsole = false;
-		/** Testing aid: sends the same line as an in-game chat message to the affected player on every insomnia roll. Off by default. */
+		/** Log every insomnia roll to the affected player's chat. Off by default. */
 		public boolean logToChat = false;
-		/** Master switch for the three fields below. Off by default = pure vanilla Phantom AI, the other two are inert regardless of their value. */
+		/** Master switch for the two fields below - see docs/GUIDE.md. */
 		public boolean neutralUntilEligible = false;
-		/** Only meaningful if neutralUntilEligible=true. false = a Phantom keeps fighting a target even if that player sleeps mid-fight; true = it re-checks every tick and disengages the instant the target becomes ineligible (except a target it's actively retaliating against - see retaliateWhenAttacked). */
+		/** Only matters if neutralUntilEligible=true - see docs/GUIDE.md. */
 		public boolean dropTargetOnceIneligible = false;
-		/** Only meaningful if neutralUntilEligible=true. If true, a Phantom that gets hit by an otherwise-ineligible player and has no current target will fight back - restores vanilla's usual mob retaliation behavior, which Phantoms normally lack entirely. Only applies to Phantoms spawned after this is enabled (goal registration happens once, at spawn). */
+		/** Only matters if neutralUntilEligible=true - see docs/GUIDE.md. */
 		public boolean retaliateWhenAttacked = false;
 
 		private static Data defaults() {
@@ -163,9 +151,9 @@ public final class PhantomTuningConfig {
 	}
 
 	public static final class NightTier {
-		/** Upper bound on the spawn-chance roll for this night. -1 = no cap (use the vanilla-formula value as-is). */
+		/** Max spawn-chance for this night. -1 = uncapped. */
 		public double chanceCap = -1;
-		/** Upper bound on how many Phantoms can spawn per successful roll this night. -1 = no cap (use vanilla difficulty-based group size). */
+		/** Max group size for this night. -1 = vanilla difficulty-based. */
 		public int maxGroupSize = -1;
 
 		public NightTier() {

@@ -7,7 +7,11 @@
 	"authors": [
 		"Stefan Braun"
 	],
-	"contact": {},
+	"contact": {
+		"homepage": "https://github.com/StefanBraun2001/smart-phantom-control/blob/master/docs/GUIDE.md",
+		"sources": "https://github.com/StefanBraun2001/smart-phantom-control",
+		"issues": "https://github.com/StefanBraun2001/smart-phantom-control/issues"
+	},
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
