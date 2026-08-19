@@ -7,7 +7,7 @@ falling back to plain, uncapped vanilla behavior once the configured
 tiers run out. Optionally also restricts who a spawned Phantom is willing
 to attack (see [the guide](https://github.com/StefanBraun2001/smart-phantom-control/blob/master/docs/GUIDE.md)).
 
-Current build: **A0.2**, **MC 26.2 only**. Source:
+Current build: **A0.2.1**, **MC 26.2 only**. Source:
 [github.com/StefanBraun2001/smart-phantom-control](https://github.com/StefanBraun2001/smart-phantom-control).
 
 **Distribution: GitHub only.** Following a Modrinth rules change, this mod
