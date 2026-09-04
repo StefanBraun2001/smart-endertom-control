@@ -1,6 +1,6 @@
-package eu.stefanbraun612.smartphantomcontrol.mixin;
+package eu.stefanbraun612.smartendertomcontrol.mixin;
 
-import eu.stefanbraun612.smartphantomcontrol.PhantomSpawnLogic;
+import eu.stefanbraun612.smartendertomcontrol.PhantomSpawnLogic;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.levelgen.PhantomSpawner;
 import org.spongepowered.asm.mixin.Mixin;
@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PhantomSpawnerMixin {
 
 	@Inject(method = "tick", at = @At("HEAD"), cancellable = true)
-	private void smartphantomcontrol$onTick(ServerLevel level, boolean spawnEnemies, CallbackInfo ci) {
+	private void smartendertomcontrol$onTick(ServerLevel level, boolean spawnEnemies, CallbackInfo ci) {
 		ci.cancel();
 		PhantomSpawnLogic.tick((PhantomSpawnerAccessor) this, level, spawnEnemies);
 	}

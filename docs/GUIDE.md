@@ -1,4 +1,4 @@
-# Smart Phantom Control - Detailed Guide
+# Smart Endertom Control - Detailed Guide
 
 Full field-by-field reference. See the [repo README](../README.md) for a
 quick overview, install steps, and the default preset table.
@@ -26,22 +26,41 @@ player's own insomnia state; see "Neutral targeting" below for the opt-in
 fix (off by default, so this is a pure add-on, not a default behavior
 change).
 
+Separately, and completely independently of all of the above, this mod can
+also tune **Enderman block-griefing** - how often an Enderman picks up a
+block and how often it puts one back down, plus a second, harder roll for
+a configurable list of "problematic" blocks it'll otherwise struggle to
+find a spot to place (cactus and the like). See "Enderman tuning" below.
+Off by default, same as everything else.
+
 ## Master switch
 
 The `spawn_phantoms` gamerule (`/gamerule spawn_phantoms true|false`) is
 still the master on/off switch, exactly like vanilla. If it's `false`,
 nothing in this mod runs either - Phantoms just don't spawn.
 
+## Upgrading from Smart Phantom Control (pre-A0.3)
+
+This mod was renamed from "Smart Phantom Control" at A0.3, along with its
+mod id, config filename, and per-world subfolder (`smartphantomcontrol` →
+`smartendertomcontrol` throughout). On first load after upgrading, if the
+new config file doesn't exist yet but an old `smartphantomcontrol.json` (or
+a world's old `smartphantomcontrol/config.json`) does, it's automatically
+read, saved out under the new name/location with all your old values
+intact (new A0.3+ fields simply take their defaults, same as any other
+old config file), and the old file is deleted. This runs once per
+global/per-world file and does nothing once the new file already exists.
+
 ## Global vs. per-world config
 
-`config/smartphantomcontrol.json` (the **global file**) always exists and
+`config/smartendertomcontrol.json` (the **global file**) always exists and
 is always read first. Its `configScope` field decides where the *active*
 tuning values actually come from:
 
 - **`"global"`** (default): this same global file's `thresholdTicks`/
   `tiers`/`logToConsole`/`logToChat` fields are used directly, for every world/server
   that loads this mod.
-- **`"per_world"`**: instead, `<world save folder>/smartphantomcontrol/config.json`
+- **`"per_world"`**: instead, `<world save folder>/smartendertomcontrol/config.json`
   is used. The first time a given world is loaded while this scope is
   active, that per-world file is created as a copy of whatever the global
   file's tuning values are *at that moment* - after that, editing the
@@ -77,7 +96,23 @@ Global file, created with defaults on first run:
   "logToChat": false,
   "neutralUntilEligible": false,
   "dropTargetOnceIneligible": false,
-  "retaliateWhenAttacked": false
+  "retaliateWhenAttacked": false,
+  "useCustomGroupSize": false,
+  "maxGroupSizeC": 3,
+  "useSuccessCeiling": false,
+  "successCeiling": 0.5,
+  "endermanBlockChange": false,
+  "endermanPickupChance": 0.05,
+  "endermanPlaceChance": 0.0005,
+  "gateProblematicBlocks": false,
+  "problematicBlock": [
+    "minecraft:cactus",
+    "minecraft:crimson_roots",
+    "minecraft:warped_roots",
+    "minecraft:red_mushroom",
+    "minecraft:brown_mushroom"
+  ],
+  "problematicBlockChance": 0.4
 }
 ```
 
@@ -99,6 +134,13 @@ Global file, created with defaults on first run:
 - **`neutralUntilEligible`** / **`dropTargetOnceIneligible`** /
   **`retaliateWhenAttacked`** (all default `false`): see "Neutral
   targeting" below.
+- **`useCustomGroupSize`** / **`maxGroupSizeC`** / **`useSuccessCeiling`** /
+  **`successCeiling`** (all default `false`/`3`/`false`/`0.5`): flat
+  overrides on top of the tier system - see "Flat overrides" below.
+- **`endermanBlockChange`** and the `enderman*`/`*problematicBlock*` fields
+  (all default `false`/vanilla-matching values): Enderman block-griefing
+  tuning, entirely independent of everything Phantom-related above - see
+  "Enderman tuning" below.
 
 ### Neutral targeting
 
@@ -145,6 +187,72 @@ from an existing JSON file, so upgrading the mod without touching your
 config reproduces exactly the same, unmodified vanilla-adjacent behavior
 you already had - nothing about existing setups changes unless you
 explicitly opt in.
+
+### Flat overrides
+
+Two independent, off-by-default overrides that sit on top of (and, when
+enabled, replace) the tier table:
+
+- **`useCustomGroupSize`** (default `false`) - when `true`, every
+  successful spawn roll uses a flat group size cap instead of the current
+  night's tier (or vanilla's difficulty-based range once past your tiers):
+  **`maxGroupSizeC`** (default `3`) is the max, uniformly rolled between 1
+  and this number. Can be set lower than vanilla ever produces (e.g. `1`,
+  always a single Phantom) or higher (e.g. `6`, bigger swarms than vanilla
+  allows on any difficulty).
+- **`useSuccessCeiling`** (default `false`) - when `true`, **`successCeiling`**
+  (default `0.5`, a fraction like the tiers' `chanceCap`) becomes a hard cap
+  applied on top of whatever chance the threshold/tier math already
+  produced: `finalChance = min(tierChance, successCeiling)`. Unlike a
+  tier's own `chanceCap`, this keeps applying even once you're past your
+  last configured tier and would otherwise fall back to vanilla's
+  uncapped, ever-climbing chance - so it's the way to put a permanent
+  ceiling on spawn chance regardless of how many nights someone goes
+  without sleeping.
+
+Both are independent of each other and of the tier list - you can use
+either, both, or neither alongside the tiers.
+
+## Enderman tuning
+
+Vanilla Endermen re-roll, once per tick each, whether they want to pick up
+a nearby carriable block (chance `1/20` when eligible, gated behind the
+`mobGriefing` gamerule) and, if already carrying one, whether they want to
+place it back down (chance `1/2000`). This mod can replace both rolls with
+configured values, and add a second, independent roll specifically for a
+list of "problematic" blocks - ones that generate in few places, so an
+Enderman that grabs one is unlikely to find anywhere sensible to put it
+back, and effectively steals it.
+
+- **`endermanBlockChange`** (default `false`) - master switch. While
+  `false`, Enderman pickup/place behavior is 100% unmodified vanilla and
+  every field below is inert.
+- **`endermanPickupChance`** (default `0.05`, matches vanilla's own `1/20`
+  baseline) - chance per tick an eligible Enderman successfully rolls
+  "wants to pick up a block". Lower this to make Endermen grab blocks less
+  often; raise it (up to `1.0`) to make them grab more eagerly.
+- **`endermanPlaceChance`** (default `0.0005`, matches vanilla's own
+  `1/2000` baseline) - same idea for placing back down a block it's
+  already carrying.
+- **`gateProblematicBlocks`** (default `false`) - master switch for the
+  second roll below. Only meaningful while `endermanBlockChange` is also
+  `true`.
+- **`problematicBlock`** (default: Cactus, Crimson Roots, Warped Roots, Red
+  Mushroom, Brown Mushroom) - a list of block IDs (`"minecraft:cactus"`
+  style) subject to the extra roll below when picked as a pickup candidate.
+  Add or remove entries freely.
+- **`problematicBlockChance`** (default `0.4`, i.e. 40%) - only matters
+  when `gateProblematicBlocks=true`: if the block an Enderman is about to
+  pick up is on the `problematicBlock` list, it additionally has to pass
+  this roll (independent of `endermanPickupChance`) or the pickup is
+  cancelled and the block stays put. So a problematic block's real-world
+  pickup rate is `endermanPickupChance × problematicBlockChance` when both
+  switches are on.
+
+Because these two rolls are independent, an Enderman with default settings
+and both switches enabled is roughly 2.5× less likely per tick to grab a
+cactus than a normal block (`0.4` extra factor), while still using whatever
+`endermanPickupChance` you've set for everything else.
 
 ### Getting plain vanilla behavior back
 
@@ -249,7 +357,7 @@ through night 10:**
 
 ## Reloading config without a restart
 
-`/phantomtuner reload` (requires operator/gamemaster permission) re-reads
+`/endertomtuner reload` (requires operator/gamemaster permission) re-reads
 the global file and re-resolves scope (global vs. per-world) immediately -
 no server restart needed while you're tuning values, including toggling
 `configScope` itself. The config is also re-loaded automatically on every
@@ -257,7 +365,7 @@ server start.
 
 ## Opening the config file in-game (Singleplayer only)
 
-`/phantomtuner edit` opens the currently active config file (whichever one
+`/endertomtuner edit` opens the currently active config file (whichever one
 actually applies right now - global or per-world) in your system's default
 text editor - the same as double-clicking it in a file browser.
 
@@ -314,7 +422,9 @@ deliberate match to vanilla, not an oversight.
 Negligible. The custom logic only replaces vanilla's own per-tick math for
 the same spawn-attempt cadence vanilla already uses (roughly once every
 1-2 minutes per player) - no extra spawn attempts, no extra world queries.
-Placement/legality checks are the unmodified vanilla routines.
+Placement/legality checks are the unmodified vanilla routines. Same story
+for the Enderman rolls - one extra `Random.nextDouble()` in place of
+vanilla's own roll, at the same per-tick cadence vanilla already runs it.
 
 ## Troubleshooting
 
@@ -323,14 +433,19 @@ Placement/legality checks are the unmodified vanilla routines.
   (Overworld only) - both are unmodified vanilla requirements this mod
   doesn't touch.
 - **Changed the config but nothing changed in-game**: run
-  `/phantomtuner reload`, or check the server log for a
-  "[SmartPhantomControl] Using GLOBAL config: ..." or "...Using PER-WORLD
+  `/endertomtuner reload`, or check the server log for a
+  "[SmartEndertomControl] Using GLOBAL config: ..." or "...Using PER-WORLD
   config: ..." line to confirm which file actually got parsed and used.
 - **Edited the global file's tiers but a world under `"per_world"` scope
   didn't change**: expected - once a world has its own per-world file,
   the global file's tuning fields (aside from `configScope` itself) no
   longer affect it. Edit that world's own
-  `<world save>/smartphantomcontrol/config.json` instead.
+  `<world save>/smartendertomcontrol/config.json` instead.
+- **Endermen still griefing blocks at the normal rate**: check
+  `endermanBlockChange` is `true` - every Enderman field is inert while
+  it's `false`, same pattern as `neutralUntilEligible` for Phantoms. Also
+  check `/gamerule mobGriefing` is `true` - vanilla gates Enderman
+  pickup/place behind it, and this mod doesn't touch that gate.
 
 ## License
 

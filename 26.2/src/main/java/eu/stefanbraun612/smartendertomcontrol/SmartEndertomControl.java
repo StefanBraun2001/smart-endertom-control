@@ -1,4 +1,4 @@
-package eu.stefanbraun612.smartphantomcontrol;
+package eu.stefanbraun612.smartendertomcontrol;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -14,8 +14,8 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Locale;
 
-public final class SmartPhantomControl implements ModInitializer {
-	public static final String MOD_ID = "smartphantomcontrol";
+public final class SmartEndertomControl implements ModInitializer {
+	public static final String MOD_ID = "smartendertomcontrol";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
 	@Override
@@ -23,35 +23,35 @@ public final class SmartPhantomControl implements ModInitializer {
 		// No MinecraftServer/world exists yet at mod-init time (needed to resolve a
 		// per-world config path), so the actual config load happens once a server
 		// (including SP's embedded one) starts, not here.
-		ServerLifecycleEvents.SERVER_STARTING.register(PhantomTuningConfig::load);
+		ServerLifecycleEvents.SERVER_STARTING.register(SmartEndertomConfig::load);
 
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) ->
-				dispatcher.register(Commands.literal("phantomtuner")
+				dispatcher.register(Commands.literal("endertomtuner")
 						.requires(Commands.hasPermission(Commands.LEVEL_GAMEMASTERS))
 						.then(Commands.literal("reload").executes(ctx -> {
-							PhantomTuningConfig.load(ctx.getSource().getServer());
+							SmartEndertomConfig.load(ctx.getSource().getServer());
 							ctx.getSource().sendSuccess(
-									() -> Component.literal("[SmartPhantomControl] Config reloaded."), true);
+									() -> Component.literal("[SmartEndertomControl] Config reloaded."), true);
 							return 1;
 						}))
 						.then(Commands.literal("edit").executes(ctx -> {
 							MinecraftServer server = ctx.getSource().getServer();
-							Path path = PhantomTuningConfig.getActivePath();
+							Path path = SmartEndertomConfig.getActivePath();
 							if (!server.isSingleplayer()) {
 								ctx.getSource().sendFailure(Component.literal(
-										"[SmartPhantomControl] /phantomtuner edit only works in Singleplayer. "
+										"[SmartEndertomControl] /endertomtuner edit only works in Singleplayer. "
 												+ "Edit the file directly on the server: " + path));
 								return 0;
 							}
 							try {
 								openInFileEditor(path);
 								ctx.getSource().sendSuccess(
-										() -> Component.literal("[SmartPhantomControl] Opening " + path), true);
+										() -> Component.literal("[SmartEndertomControl] Opening " + path), true);
 								return 1;
 							} catch (IOException e) {
-								LOGGER.error("[SmartPhantomControl] Failed to open {}", path, e);
+								LOGGER.error("[SmartEndertomControl] Failed to open {}", path, e);
 								ctx.getSource().sendFailure(Component.literal(
-										"[SmartPhantomControl] Failed to open the file - edit it manually: " + path));
+										"[SmartEndertomControl] Failed to open the file - edit it manually: " + path));
 								return 0;
 							}
 						}))));

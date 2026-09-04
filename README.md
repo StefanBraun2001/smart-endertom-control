@@ -1,18 +1,28 @@
-# Smart Phantom Control
+# Smart Endertom Control
 
-Server-side-only Fabric mod for MC 26.2. Replaces vanilla's Phantom
-("insomnia") spawner with a fully tunable version - custom eligibility
-threshold, per-eligible-night spawn-chance caps and group-size caps,
-falling back to plain, uncapped vanilla behavior once the configured
-tiers run out. Optionally also restricts who a spawned Phantom is willing
-to attack (see [the guide](https://github.com/StefanBraun2001/smart-phantom-control/blob/master/docs/GUIDE.md)).
+Server-side-only Fabric mod for MC 26.2 with two independent QoL pieces:
 
-Current build: **A0.2.1**, **MC 26.2 only**. Source:
-[github.com/StefanBraun2001/smart-phantom-control](https://github.com/StefanBraun2001/smart-phantom-control).
+- **Phantom tuning** - replaces vanilla's Phantom ("insomnia") spawner with
+  a fully tunable version: custom eligibility threshold, per-eligible-night
+  spawn-chance caps and group-size caps (or a flat custom group-size cap,
+  or a hard success-chance ceiling), falling back to plain, uncapped
+  vanilla behavior once the configured tiers run out. Optionally also
+  restricts who a spawned Phantom is willing to attack.
+- **Enderman tuning** - independent chance multipliers for how often an
+  Enderman picks up and places blocks, plus a second, harder roll for a
+  configurable list of "problematic" blocks (cactus and the like) so
+  Endermen steal fewer blocks they'll struggle to put back.
+
+Both pieces are off by default and fully independent. See
+[the guide](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)
+for the full field reference.
+
+Current build: **A0.3**, **MC 26.2 only**. Source:
+[github.com/StefanBraun2001/smart-endertom-control](https://github.com/StefanBraun2001/smart-endertom-control).
 
 **Distribution: GitHub only.** Following a Modrinth rules change, this mod
 is no longer distributed there - grab jars from the
-[Releases](https://github.com/StefanBraun2001/smart-phantom-control/releases)
+[Releases](https://github.com/StefanBraun2001/smart-endertom-control/releases)
 page instead.
 
 ## Install
@@ -34,8 +44,13 @@ Eligibility threshold unchanged from vanilla (night 3). From there:
 | 4th eligible    | 50%       | 3               |
 | 5th eligible on | vanilla (uncapped) | vanilla (1-4, difficulty-based) |
 
+`useCustomGroupSize` and `useSuccessCeiling` can override the tier table
+above with a flat cap; Enderman tuning (`endermanBlockChange` and friends)
+is a completely separate, also-off-by-default set of toggles. See the
+guide for both.
+
 Full config reference, worked examples, and troubleshooting:
-**[docs/GUIDE.md](https://github.com/StefanBraun2001/smart-phantom-control/blob/master/docs/GUIDE.md)**.
+**[docs/GUIDE.md](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)**.
 
 ## Building from source
 

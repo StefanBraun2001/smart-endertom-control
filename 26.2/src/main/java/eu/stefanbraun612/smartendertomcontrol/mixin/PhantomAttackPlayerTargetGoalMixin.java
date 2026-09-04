@@ -1,7 +1,7 @@
-package eu.stefanbraun612.smartphantomcontrol.mixin;
+package eu.stefanbraun612.smartendertomcontrol.mixin;
 
-import eu.stefanbraun612.smartphantomcontrol.PhantomEligibility;
-import eu.stefanbraun612.smartphantomcontrol.PhantomTuningConfig;
+import eu.stefanbraun612.smartendertomcontrol.PhantomEligibility;
+import eu.stefanbraun612.smartendertomcontrol.SmartEndertomConfig;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
@@ -41,8 +41,8 @@ public abstract class PhantomAttackPlayerTargetGoalMixin extends Goal {
 	private int nextScanTick;
 
 	@Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
-	private void smartphantomcontrol$canUse(CallbackInfoReturnable<Boolean> cir) {
-		PhantomTuningConfig.Data config = PhantomTuningConfig.get();
+	private void smartendertomcontrol$canUse(CallbackInfoReturnable<Boolean> cir) {
+		SmartEndertomConfig.Data config = SmartEndertomConfig.get();
 		if (!config.neutralUntilEligible) {
 			return;
 		}
@@ -68,7 +68,7 @@ public abstract class PhantomAttackPlayerTargetGoalMixin extends Goal {
 					continue;
 				}
 				if (!((PhantomCanAttackInvoker) this.this$0)
-						.smartphantomcontrol$canAttack(level, player, TargetingConditions.DEFAULT)) {
+						.smartendertomcontrol$canAttack(level, player, TargetingConditions.DEFAULT)) {
 					continue;
 				}
 				this.this$0.setTarget(player);
@@ -80,11 +80,11 @@ public abstract class PhantomAttackPlayerTargetGoalMixin extends Goal {
 	}
 
 	@Inject(method = "canContinueToUse", at = @At("RETURN"), cancellable = true)
-	private void smartphantomcontrol$canContinueToUse(CallbackInfoReturnable<Boolean> cir) {
+	private void smartendertomcontrol$canContinueToUse(CallbackInfoReturnable<Boolean> cir) {
 		if (!cir.getReturnValue()) {
 			return;
 		}
-		PhantomTuningConfig.Data config = PhantomTuningConfig.get();
+		SmartEndertomConfig.Data config = SmartEndertomConfig.get();
 		if (!config.neutralUntilEligible || !config.dropTargetOnceIneligible) {
 			return;
 		}

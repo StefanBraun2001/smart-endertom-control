@@ -1,4 +1,4 @@
-package eu.stefanbraun612.smartphantomcontrol;
+package eu.stefanbraun612.smartendertomcontrol;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.stats.ServerStatsCounter;
@@ -11,7 +11,7 @@ public final class PhantomEligibility {
 	private PhantomEligibility() {
 	}
 
-	public static boolean isEligible(ServerPlayer player, PhantomTuningConfig.Data config) {
+	public static boolean isEligible(ServerPlayer player, SmartEndertomConfig.Data config) {
 		ServerStatsCounter stats = player.getStats();
 		int timeSinceRest = Mth.clamp(
 				(int) stats.getValue(Stats.CUSTOM.get(Stats.TIME_SINCE_REST)), 1, Integer.MAX_VALUE);

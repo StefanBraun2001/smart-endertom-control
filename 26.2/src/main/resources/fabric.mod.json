@@ -1,26 +1,26 @@
 {
 	"schemaVersion": 1,
-	"id": "smartphantomcontrol",
+	"id": "smartendertomcontrol",
 	"version": "${version}",
-	"name": "Smart Phantom Control",
-	"description": "Server-side (SP + MP, no client mod needed) tuning of Phantom insomnia spawning: custom eligibility threshold, per-eligible-night spawn-chance caps and group-size caps, falling back to plain vanilla behavior once the configured tiers run out.",
+	"name": "Smart Endertom Control",
+	"description": "Server-side (SP + MP, no client mod needed) QoL tuning: Phantom insomnia spawning (eligibility threshold, per-eligible-night spawn-chance caps and group-size caps, falling back to plain vanilla behavior once the configured tiers run out) and Enderman block-griefing (independent pickup/place chance multipliers, with an extra check for a configurable list of problematic blocks).",
 	"authors": [
 		"Stefan Braun"
 	],
 	"contact": {
-		"homepage": "https://github.com/StefanBraun2001/smart-phantom-control/blob/master/docs/GUIDE.md",
-		"sources": "https://github.com/StefanBraun2001/smart-phantom-control",
-		"issues": "https://github.com/StefanBraun2001/smart-phantom-control/issues"
+		"homepage": "https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md",
+		"sources": "https://github.com/StefanBraun2001/smart-endertom-control",
+		"issues": "https://github.com/StefanBraun2001/smart-endertom-control/issues"
 	},
 	"license": "MIT",
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"eu.stefanbraun612.smartphantomcontrol.SmartPhantomControl"
+			"eu.stefanbraun612.smartendertomcontrol.SmartEndertomControl"
 		]
 	},
 	"mixins": [
-		"smartphantomcontrol.mixins.json"
+		"smartendertomcontrol.mixins.json"
 	],
 	"depends": {
 		"fabricloader": ">=0.19.3",

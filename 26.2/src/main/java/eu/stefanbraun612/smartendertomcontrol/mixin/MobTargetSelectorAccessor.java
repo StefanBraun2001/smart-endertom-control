@@ -1,4 +1,4 @@
-package eu.stefanbraun612.smartphantomcontrol.mixin;
+package eu.stefanbraun612.smartendertomcontrol.mixin;
 
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.GoalSelector;
@@ -8,5 +8,5 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 @Mixin(Mob.class)
 public interface MobTargetSelectorAccessor {
 	@Accessor("targetSelector")
-	GoalSelector smartphantomcontrol$getTargetSelector();
+	GoalSelector smartendertomcontrol$getTargetSelector();
 }

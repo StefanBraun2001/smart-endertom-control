@@ -1,4 +1,4 @@
-package eu.stefanbraun612.smartphantomcontrol.mixin;
+package eu.stefanbraun612.smartendertomcontrol.mixin;
 
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
@@ -10,5 +10,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(Phantom.class)
 public interface PhantomCanAttackInvoker {
 	@Invoker("canAttack")
-	boolean smartphantomcontrol$canAttack(ServerLevel level, LivingEntity target, TargetingConditions conditions);
+	boolean smartendertomcontrol$canAttack(ServerLevel level, LivingEntity target, TargetingConditions conditions);
 }

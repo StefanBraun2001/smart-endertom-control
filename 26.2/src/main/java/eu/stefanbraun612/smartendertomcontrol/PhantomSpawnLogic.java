@@ -1,6 +1,6 @@
-package eu.stefanbraun612.smartphantomcontrol;
+package eu.stefanbraun612.smartendertomcontrol;
 
-import eu.stefanbraun612.smartphantomcontrol.mixin.PhantomSpawnerAccessor;
+import eu.stefanbraun612.smartendertomcontrol.mixin.PhantomSpawnerAccessor;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,9 +35,9 @@ public final class PhantomSpawnLogic {
 	private PhantomSpawnLogic() {
 	}
 
-	private static void report(ServerPlayer player, PhantomTuningConfig.Data config, String message) {
+	private static void report(ServerPlayer player, SmartEndertomConfig.Data config, String message) {
 		if (config.logToConsole) {
-			SmartPhantomControl.LOGGER.info(message);
+			SmartEndertomControl.LOGGER.info(message);
 		}
 		if (config.logToChat) {
 			player.sendSystemMessage(Component.literal(message));
@@ -54,18 +54,18 @@ public final class PhantomSpawnLogic {
 
 		RandomSource random = level.getRandom();
 
-		int next = accessor.smartphantomcontrol$getNextTick() - 1;
-		accessor.smartphantomcontrol$setNextTick(next);
+		int next = accessor.smartendertomcontrol$getNextTick() - 1;
+		accessor.smartendertomcontrol$setNextTick(next);
 		if (next > 0) {
 			return;
 		}
-		accessor.smartphantomcontrol$setNextTick(next + (60 + random.nextInt(60)) * 20);
+		accessor.smartendertomcontrol$setNextTick(next + (60 + random.nextInt(60)) * 20);
 
 		if (level.getSkyDarken() < 5 && level.dimensionType().hasSkyLight()) {
 			return;
 		}
 
-		PhantomTuningConfig.Data config = PhantomTuningConfig.get();
+		SmartEndertomConfig.Data config = SmartEndertomConfig.get();
 		int threshold = config.thresholdTicks;
 
 		for (ServerPlayer player : level.players()) {
@@ -92,14 +92,14 @@ public final class PhantomSpawnLogic {
 			if (timeSinceRest <= threshold) {
 				if (debug) {
 					report(player, config, String.format(
-							"[PhantomTuner] %s: not yet eligible (timeSinceRest=%d, threshold=%d)",
+							"[EndertomTuner] %s: not yet eligible (timeSinceRest=%d, threshold=%d)",
 							player.getScoreboardName(), timeSinceRest, threshold));
 				}
 				continue;
 			}
 
 			int nightsSinceEligible = (timeSinceRest - threshold) / DAY_LENGTH_TICKS + 1;
-			PhantomTuningConfig.NightTier tier = (nightsSinceEligible - 1 < config.tiers.size())
+			SmartEndertomConfig.NightTier tier = (nightsSinceEligible - 1 < config.tiers.size())
 					? config.tiers.get(nightsSinceEligible - 1)
 					: null;
 
@@ -109,16 +109,23 @@ public final class PhantomSpawnLogic {
 					? Math.min(computedChance, tier.chanceCap)
 					: computedChance;
 
+			boolean ceilingApplied = config.useSuccessCeiling && config.successCeiling < chance;
+			if (config.useSuccessCeiling) {
+				chance = Math.min(chance, config.successCeiling);
+			}
+
 			double roll = random.nextDouble();
 			boolean rollSuccess = roll < chance;
 
 			if (debug) {
 				report(player, config, String.format(
-						"[PhantomTuner] %s: night=%d threshold=%d vanillaChance=%.1f%% cap=%s capApplied=%b finalChance=%.1f%% roll=%.1f%% -> %s",
+						"[EndertomTuner] %s: night=%d threshold=%d vanillaChance=%.1f%% cap=%s capApplied=%b ceiling=%s ceilingApplied=%b finalChance=%.1f%% roll=%.1f%% -> %s",
 						player.getScoreboardName(), nightsSinceEligible, threshold,
 						computedChance * 100.0,
 						(tier != null && tier.chanceCap >= 0) ? String.format("%.1f%%", tier.chanceCap * 100.0) : "none",
-						chanceCapApplied, chance * 100.0, roll * 100.0,
+						chanceCapApplied,
+						config.useSuccessCeiling ? String.format("%.1f%%", config.successCeiling * 100.0) : "off",
+						ceilingApplied, chance * 100.0, roll * 100.0,
 						rollSuccess ? "SUCCESS" : "fail"));
 			}
 
@@ -134,22 +141,28 @@ public final class PhantomSpawnLogic {
 			if (!NaturalSpawner.isValidEmptySpawnBlock(
 					(BlockGetter) level, spawnPos, blockState, fluidState, EntityTypes.PHANTOM)) {
 				if (debug) {
-					report(player, config, "[PhantomTuner] " + player.getScoreboardName()
+					report(player, config, "[EndertomTuner] " + player.getScoreboardName()
 							+ ": roll succeeded but spawn position was invalid, no Phantom placed");
 				}
 				continue;
 			}
 
-			boolean groupSizeCapApplied = tier != null && tier.maxGroupSize > 0;
-			int groupSize = groupSizeCapApplied
-					? 1 + random.nextInt(tier.maxGroupSize)
-					: 1 + random.nextInt(difficulty.getDifficulty().getId() + 1);
+			boolean groupSizeCapApplied = !config.useCustomGroupSize && tier != null && tier.maxGroupSize > 0;
+			int groupSize;
+			if (config.useCustomGroupSize) {
+				groupSize = 1 + random.nextInt(config.maxGroupSizeC);
+			} else if (groupSizeCapApplied) {
+				groupSize = 1 + random.nextInt(tier.maxGroupSize);
+			} else {
+				groupSize = 1 + random.nextInt(difficulty.getDifficulty().getId() + 1);
+			}
 
 			if (debug) {
 				report(player, config, String.format(
-						"[PhantomTuner] %s: groupSize=%d (%s, vanilla difficulty-based max would be %d)",
+						"[EndertomTuner] %s: groupSize=%d (%s, vanilla difficulty-based max would be %d)",
 						player.getScoreboardName(), groupSize,
-						groupSizeCapApplied ? "capped at " + tier.maxGroupSize : "uncapped/vanilla",
+						config.useCustomGroupSize ? "custom cap " + config.maxGroupSizeC
+								: (groupSizeCapApplied ? "capped at " + tier.maxGroupSize : "uncapped/vanilla"),
 						difficulty.getDifficulty().getId() + 1));
 			}
 
