@@ -51,6 +51,19 @@ intact (new A0.3+ fields simply take their defaults, same as any other
 old config file), and the old file is deleted. This runs once per
 global/per-world file and does nothing once the new file already exists.
 
+## Upgrading from the old problematicBlock list (pre-A0.4)
+
+A0.4 replaced the flat `problematicBlock` string array with the
+`holdableBlocks` list described in "Enderman tuning" below. Any config
+file that still has the old `problematicBlock` field (and no
+`holdableBlocks` field yet) is migrated automatically on load: the new
+`holdableBlocks` list starts at its full default (every vanilla-holdable
+block), then whichever blocks were in your old `problematicBlock` array
+get `problematic: true` set on their matching entry - none of them get a
+per-entry `chance`, so they all keep using the shared
+`problematicBlockChance` exactly as before. The old field is then dropped
+and won't reappear the next time the file is saved.
+
 ## Global vs. per-world config
 
 `config/smartendertomcontrol.json` (the **global file**) always exists and
@@ -105,16 +118,19 @@ Global file, created with defaults on first run:
   "endermanPickupChance": 0.05,
   "endermanPlaceChance": 0.0005,
   "gateProblematicBlocks": false,
-  "problematicBlock": [
-    "minecraft:cactus",
-    "minecraft:crimson_roots",
-    "minecraft:warped_roots",
-    "minecraft:red_mushroom",
-    "minecraft:brown_mushroom"
-  ],
-  "problematicBlockChance": 0.4
+  "problematicBlockChance": 0.4,
+  "holdableBlocks": [
+    { "block": "minecraft:dirt", "problematic": false, "chance": -1 },
+    { "block": "minecraft:cactus", "problematic": true, "chance": -1 },
+    { "block": "minecraft:sand", "problematic": false, "chance": -1 }
+  ]
 }
 ```
+
+(`holdableBlocks` actually ships with all ~45 vanilla-holdable blocks by
+default, not just the 3 shown above - trimmed here for readability. See
+"Enderman tuning" below for the full default list and what each field
+does.)
 
 - **`configScope`** (default `"global"`): `"global"` or `"per_world"` -
   see "Global vs. per-world config" above. Only meaningful in the global
@@ -137,7 +153,8 @@ Global file, created with defaults on first run:
 - **`useCustomGroupSize`** / **`maxGroupSizeC`** / **`useSuccessCeiling`** /
   **`successCeiling`** (all default `false`/`3`/`false`/`0.5`): flat
   overrides on top of the tier system - see "Flat overrides" below.
-- **`endermanBlockChange`** and the `enderman*`/`*problematicBlock*` fields
+- **`endermanBlockChange`**, `endermanPickupChance`/`endermanPlaceChance`,
+  `gateProblematicBlocks`/`problematicBlockChance`, and `holdableBlocks`
   (all default `false`/vanilla-matching values): Enderman block-griefing
   tuning, entirely independent of everything Phantom-related above - see
   "Enderman tuning" below.
@@ -219,14 +236,15 @@ Vanilla Endermen re-roll, once per tick each, whether they want to pick up
 a nearby carriable block (chance `1/20` when eligible, gated behind the
 `mobGriefing` gamerule) and, if already carrying one, whether they want to
 place it back down (chance `1/2000`). This mod can replace both rolls with
-configured values, and add a second, independent roll specifically for a
-list of "problematic" blocks - ones that generate in few places, so an
+configured values, and add a second, independent roll specifically for
+blocks flagged "problematic" - ones that generate in few places, so an
 Enderman that grabs one is unlikely to find anywhere sensible to put it
 back, and effectively steals it.
 
 - **`endermanBlockChange`** (default `false`) - master switch. While
-  `false`, Enderman pickup/place behavior is 100% unmodified vanilla and
-  every field below is inert.
+  `false`, Enderman pickup/place behavior is 100% unmodified vanilla,
+  including which blocks it's willing to pick up (vanilla's own
+  `ENDERMAN_HOLDABLE` block tag) - every field below is inert.
 - **`endermanPickupChance`** (default `0.05`, matches vanilla's own `1/20`
   baseline) - chance per tick an eligible Enderman successfully rolls
   "wants to pick up a block". Lower this to make Endermen grab blocks less
@@ -234,25 +252,54 @@ back, and effectively steals it.
 - **`endermanPlaceChance`** (default `0.0005`, matches vanilla's own
   `1/2000` baseline) - same idea for placing back down a block it's
   already carrying.
-- **`gateProblematicBlocks`** (default `false`) - master switch for the
-  second roll below. Only meaningful while `endermanBlockChange` is also
-  `true`.
-- **`problematicBlock`** (default: Cactus, Crimson Roots, Warped Roots, Red
-  Mushroom, Brown Mushroom) - a list of block IDs (`"minecraft:cactus"`
-  style) subject to the extra roll below when picked as a pickup candidate.
-  Add or remove entries freely.
-- **`problematicBlockChance`** (default `0.4`, i.e. 40%) - only matters
-  when `gateProblematicBlocks=true`: if the block an Enderman is about to
-  pick up is on the `problematicBlock` list, it additionally has to pass
-  this roll (independent of `endermanPickupChance`) or the pickup is
-  cancelled and the block stays put. So a problematic block's real-world
-  pickup rate is `endermanPickupChance × problematicBlockChance` when both
-  switches are on.
+- **`holdableBlocks`** - the full list of blocks an Enderman is willing to
+  pick up **while `endermanBlockChange=true`**. This *replaces* vanilla's
+  `ENDERMAN_HOLDABLE` tag entirely rather than layering on top of it -
+  ships pre-populated with every block vanilla's own tag resolves to in
+  26.2 (~45 blocks: dirt/coarse dirt/rooted dirt, grass block/podzol/
+  mycelium, sand, red sand, gravel, clay, mud/muddy mangrove roots, moss
+  blocks, TNT, pumpkin/carved pumpkin/melon, cactus/cactus flower,
+  crimson/warped fungus/nylium/roots, both mushrooms, and every small
+  flower), each with its own `problematic` flag and `chance` override:
+  ```json
+  { "block": "minecraft:cactus", "problematic": true, "chance": -1 }
+  ```
+  - **`block`**: the block ID.
+  - **`problematic`** (default `false`, `true` for the 5 blocks below) -
+    whether this entry is subject to the extra roll described below.
+  - **`chance`** (default `-1`) - per-entry override for the roll's
+    probability. `-1` means "use the shared `problematicBlockChance`
+    below"; set a value between `0` and `1` to give this specific block
+    its own rate instead (e.g. make TNT rarer to grab than cactus without
+    changing the shared default).
 
-Because these two rolls are independent, an Enderman with default settings
-and both switches enabled is roughly 2.5× less likely per tick to grab a
-cactus than a normal block (`0.4` extra factor), while still using whatever
-`endermanPickupChance` you've set for everything else.
+  Add a block to make Endermen able to grab it even though vanilla
+  wouldn't; delete a vanilla entry to stop them from grabbing it even
+  though vanilla would. Because this list is authoritative rather than
+  filtering on top of the real tag, a datapack or another mod that adds
+  entries to `ENDERMAN_HOLDABLE` directly will **not** be picked up
+  automatically once `endermanBlockChange=true` - add such blocks to
+  `holdableBlocks` yourself if you want them respected too.
+- **`gateProblematicBlocks`** (default `false`) - master switch for
+  whether `problematic`-flagged entries actually get the extra roll.
+  While `false`, every listed block (problematic-flagged or not) picks up
+  at the plain `endermanPickupChance` rate. Only meaningful while
+  `endermanBlockChange` is also `true`.
+- **`problematicBlockChance`** (default `0.4`, i.e. 40%) - the shared
+  fallback probability used by any `problematic: true` entry that doesn't
+  set its own `chance`. When `gateProblematicBlocks=true` and a rolled
+  candidate is problematic, it additionally has to pass this roll
+  (independent of `endermanPickupChance`) or the pickup is cancelled and
+  the block stays put.
+
+Because the pickup roll and the problematic roll are independent, a
+problematic block using the shared 40% default is roughly 2.5× less
+likely per tick to be grabbed than a normal one, on top of whatever
+`endermanPickupChance` you've set.
+
+**Defaults out of the box**: Cactus, Crimson Roots, Warped Roots, Crimson
+Fungus, Warped Fungus, Red Mushroom, and Brown Mushroom start
+`problematic: true`; every other entry starts `false`.
 
 ### Getting plain vanilla behavior back
 

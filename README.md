@@ -17,7 +17,7 @@ Both pieces are off by default and fully independent. See
 [the guide](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)
 for the full field reference.
 
-Current build: **A0.3**, **MC 26.2 only**. Source:
+Current build: **A0.4**, **MC 26.2 only**. Source:
 [github.com/StefanBraun2001/smart-endertom-control](https://github.com/StefanBraun2001/smart-endertom-control).
 
 **Distribution: GitHub only.** Following a Modrinth rules change, this mod

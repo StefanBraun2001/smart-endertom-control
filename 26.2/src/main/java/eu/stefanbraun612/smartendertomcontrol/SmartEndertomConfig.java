@@ -100,10 +100,17 @@ public final class SmartEndertomConfig {
 			if (!Files.exists(path)) {
 				save(path, fallback.get());
 			}
+			Data result;
 			try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
 				Data loaded = GSON.fromJson(reader, Data.class);
-				return loaded != null ? loaded.sanitized() : fallback.get().sanitized();
+				result = loaded != null ? loaded.sanitized() : fallback.get().sanitized();
 			}
+			// Always write the sanitized/current-shape result back out - sanitized()
+			// can migrate an old field shape (e.g. problematicBlock -> holdableBlocks)
+			// in memory, and without this the file on disk would silently keep
+			// showing the old shape forever even though runtime behavior is correct.
+			save(path, result);
+			return result;
 		} catch (IOException e) {
 			LOGGER.error("[SmartEndertomControl] Failed to load {}, falling back to defaults", path, e);
 			return fallback.get().sanitized();
@@ -174,25 +181,61 @@ public final class SmartEndertomConfig {
 		public double endermanPickupChance = 0.05;
 		/** Chance per tick a block-carrying Enderman successfully places its block. Vanilla default is much higher. */
 		public double endermanPlaceChance = 0.0005;
-		/** Master switch for the second pickup roll against problematicBlock - see docs/GUIDE.md. */
+		/** Master switch for the second, per-block pickup roll below - see docs/GUIDE.md. */
 		public boolean gateProblematicBlocks = false;
-		/** Block IDs subject to the second, harder pickup roll when gateProblematicBlocks=true. */
-		public List<String> problematicBlock = defaultProblematicBlocks();
-		/** Only matters if gateProblematicBlocks=true - chance a problematic-block pickup is still allowed through. */
+		/** Fallback chance used by any problematic=true entry below that doesn't set its own chance. */
 		public double problematicBlockChance = 0.4;
+		/**
+		 * The full list of blocks an Enderman is allowed to pick up - replaces
+		 * vanilla's ENDERMAN_HOLDABLE tag entirely while endermanBlockChange=true.
+		 * Defaults to every vanilla-holdable block; add/remove entries freely.
+		 * See docs/GUIDE.md.
+		 */
+		public List<HoldableBlockEntry> holdableBlocks = defaultHoldableBlocks();
+
+		/**
+		 * Pre-A0.4 field (was a flat list of "problematic" block IDs, gated by a
+		 * single shared problematicBlockChance). Migrated into holdableBlocks'
+		 * per-entry "problematic" flags in sanitized() below and never written
+		 * back out - absent from any config saved by A0.4+.
+		 */
+		private List<String> problematicBlock;
 
 		private static Data defaults() {
 			return new Data();
 		}
 
-		private static List<String> defaultProblematicBlocks() {
-			List<String> blocks = new ArrayList<>();
-			blocks.add("minecraft:cactus");
-			blocks.add("minecraft:crimson_roots");
-			blocks.add("minecraft:warped_roots");
-			blocks.add("minecraft:red_mushroom");
-			blocks.add("minecraft:brown_mushroom");
-			return blocks;
+		private static List<HoldableBlockEntry> defaultHoldableBlocks() {
+			java.util.Set<String> problematicByDefault = new java.util.HashSet<>(java.util.Arrays.asList(
+					"minecraft:cactus", "minecraft:crimson_roots", "minecraft:warped_roots",
+					"minecraft:red_mushroom", "minecraft:brown_mushroom",
+					"minecraft:crimson_fungus", "minecraft:warped_fungus"));
+			// Every block vanilla's own ENDERMAN_HOLDABLE tag (and the tags it
+			// references) resolves to in 26.2 - see docs/GUIDE.md for how this
+			// was pulled from the vanilla data.
+			String[] vanillaHoldable = {
+					"minecraft:dandelion", "minecraft:open_eyeblossom", "minecraft:poppy", "minecraft:blue_orchid",
+					"minecraft:allium", "minecraft:azure_bluet", "minecraft:red_tulip", "minecraft:orange_tulip",
+					"minecraft:white_tulip", "minecraft:pink_tulip", "minecraft:oxeye_daisy", "minecraft:cornflower",
+					"minecraft:lily_of_the_valley", "minecraft:wither_rose", "minecraft:torchflower",
+					"minecraft:closed_eyeblossom", "minecraft:golden_dandelion",
+					"minecraft:dirt", "minecraft:coarse_dirt", "minecraft:rooted_dirt",
+					"minecraft:mud", "minecraft:muddy_mangrove_roots",
+					"minecraft:moss_block", "minecraft:pale_moss_block",
+					"minecraft:grass_block", "minecraft:podzol", "minecraft:mycelium",
+					"minecraft:sand", "minecraft:red_sand", "minecraft:gravel",
+					"minecraft:brown_mushroom", "minecraft:red_mushroom",
+					"minecraft:tnt", "minecraft:cactus", "minecraft:clay",
+					"minecraft:pumpkin", "minecraft:carved_pumpkin", "minecraft:melon",
+					"minecraft:crimson_fungus", "minecraft:crimson_nylium", "minecraft:crimson_roots",
+					"minecraft:warped_fungus", "minecraft:warped_nylium", "minecraft:warped_roots",
+					"minecraft:cactus_flower",
+			};
+			List<HoldableBlockEntry> entries = new ArrayList<>();
+			for (String block : vanillaHoldable) {
+				entries.add(new HoldableBlockEntry(block, problematicByDefault.contains(block)));
+			}
+			return entries;
 		}
 
 		private static List<NightTier> defaultTiers() {
@@ -221,8 +264,8 @@ public final class SmartEndertomConfig {
 			copy.endermanPickupChance = this.endermanPickupChance;
 			copy.endermanPlaceChance = this.endermanPlaceChance;
 			copy.gateProblematicBlocks = this.gateProblematicBlocks;
-			copy.problematicBlock = new ArrayList<>(this.problematicBlock);
 			copy.problematicBlockChance = this.problematicBlockChance;
+			copy.holdableBlocks = new ArrayList<>(this.holdableBlocks);
 			return copy;
 		}
 
@@ -245,8 +288,24 @@ public final class SmartEndertomConfig {
 			endermanPickupChance = clamp01(endermanPickupChance);
 			endermanPlaceChance = clamp01(endermanPlaceChance);
 			problematicBlockChance = clamp01(problematicBlockChance);
-			if (problematicBlock == null) {
-				problematicBlock = new ArrayList<>();
+			if (holdableBlocks == null) {
+				holdableBlocks = defaultHoldableBlocks();
+			}
+			for (HoldableBlockEntry entry : holdableBlocks) {
+				if (entry.chance >= 0) {
+					entry.chance = clamp01(entry.chance);
+				}
+			}
+			// Pre-A0.4 config: fold the old flat problematicBlock list into the
+			// per-entry flags above (holdableBlocks itself already sat at its
+			// full vanilla-matching default, since old files don't have that key
+			// at all), then drop the legacy field so it's never written back out.
+			if (problematicBlock != null) {
+				java.util.Set<String> legacyProblematic = new java.util.HashSet<>(problematicBlock);
+				for (HoldableBlockEntry entry : holdableBlocks) {
+					entry.problematic = legacyProblematic.contains(entry.block);
+				}
+				problematicBlock = null;
 			}
 			return this;
 		}
@@ -259,6 +318,33 @@ public final class SmartEndertomConfig {
 				return 1;
 			}
 			return value;
+		}
+
+		/** Null if the given block ID isn't present in holdableBlocks. */
+		public HoldableBlockEntry findHoldableBlock(String blockId) {
+			for (HoldableBlockEntry entry : holdableBlocks) {
+				if (entry.block.equals(blockId)) {
+					return entry;
+				}
+			}
+			return null;
+		}
+	}
+
+	public static final class HoldableBlockEntry {
+		/** Block ID, e.g. "minecraft:cactus". */
+		public String block;
+		/** Subject to the second, harder pickup roll below when gateProblematicBlocks=true. */
+		public boolean problematic = false;
+		/** Per-entry override for problematicBlockChance. -1 (default) = use the shared fallback value. */
+		public double chance = -1;
+
+		public HoldableBlockEntry() {
+		}
+
+		public HoldableBlockEntry(String block, boolean problematic) {
+			this.block = block;
+			this.problematic = problematic;
 		}
 	}
 
