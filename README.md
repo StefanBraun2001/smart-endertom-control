@@ -1,6 +1,6 @@
 # Smart Endertom Control
 
-Server-side-only Fabric mod for MC 26.2 with two independent QoL pieces:
+Server-side-only Fabric mod for MC 26.2 with three independent QoL pieces:
 
 - **Phantom tuning** - replaces vanilla's Phantom ("insomnia") spawner with
   a fully tunable version: custom eligibility threshold, per-eligible-night
@@ -12,12 +12,16 @@ Server-side-only Fabric mod for MC 26.2 with two independent QoL pieces:
   Enderman picks up and places blocks, plus a second, harder roll for a
   configurable list of "problematic" blocks (cactus and the like) so
   Endermen steal fewer blocks they'll struggle to put back.
+- **Creeper explosion block recovery** - configured blocks always drop
+  their normal item, or drop as themselves (as if Silk Touch mined),
+  when a Creeper explosion destroys them - no more filling holes with
+  blocks that vanished into thin air.
 
-Both pieces are off by default and fully independent. See
+All three pieces are off by default and fully independent. See
 [the guide](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)
 for the full field reference.
 
-Current build: **A0.4**, **MC 26.2 only**. Source:
+Current build: **A0.5**, **MC 26.2 only**. Source:
 [github.com/StefanBraun2001/smart-endertom-control](https://github.com/StefanBraun2001/smart-endertom-control).
 
 **Distribution: GitHub only.** Following a Modrinth rules change, this mod
@@ -46,8 +50,9 @@ Eligibility threshold unchanged from vanilla (night 3). From there:
 
 `useCustomGroupSize` and `useSuccessCeiling` can override the tier table
 above with a flat cap; Enderman tuning (`endermanBlockChange` and friends)
-is a completely separate, also-off-by-default set of toggles. See the
-guide for both.
+and Creeper block recovery (`creeperBlockRecovery` and friends) are each
+completely separate, also-off-by-default sets of toggles. See the guide
+for all three.
 
 Full config reference, worked examples, and troubleshooting:
 **[docs/GUIDE.md](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)**.

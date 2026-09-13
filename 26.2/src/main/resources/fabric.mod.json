@@ -3,7 +3,7 @@
 	"id": "smartendertomcontrol",
 	"version": "${version}",
 	"name": "Smart Endertom Control",
-	"description": "Server-side (SP + MP, no client mod needed) QoL tuning: Phantom insomnia spawning (eligibility threshold, per-eligible-night spawn-chance caps and group-size caps, falling back to plain vanilla behavior once the configured tiers run out) and Enderman block-griefing (independent pickup/place chance multipliers, with an extra check for a configurable list of problematic blocks).",
+	"description": "Server-side (SP + MP, no client mod needed) QoL tuning: Phantom insomnia spawning (eligibility threshold, per-eligible-night spawn-chance caps and group-size caps, falling back to plain vanilla behavior once the configured tiers run out), Enderman block-griefing (independent pickup/place chance multipliers, with an extra check for a configurable list of problematic blocks), and Creeper explosion block recovery (configured blocks always drop their normal item or their own block item, bypassing explosion decay).",
 	"authors": [
 		"Stefan Braun"
 	],

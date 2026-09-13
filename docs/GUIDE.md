@@ -33,6 +33,12 @@ a configurable list of "problematic" blocks it'll otherwise struggle to
 find a spot to place (cactus and the like). See "Enderman tuning" below.
 Off by default, same as everything else.
 
+Separately again, this mod can also make **Creeper explosions reliably
+recoverable** for configured blocks - guaranteeing either the block's
+normal drop or the block itself (as if Silk Touch mined), instead of
+vanilla's distance-based chance of dropping nothing at all. See "Creeper
+explosion block recovery" below. Off by default, same as everything else.
+
 ## Master switch
 
 The `spawn_phantoms` gamerule (`/gamerule spawn_phantoms true|false`) is
@@ -123,6 +129,22 @@ Global file, created with defaults on first run:
     { "block": "minecraft:dirt", "problematic": false, "chance": -1 },
     { "block": "minecraft:cactus", "problematic": true, "chance": -1 },
     { "block": "minecraft:sand", "problematic": false, "chance": -1 }
+  ],
+  "creeperBlockRecovery": false,
+  "creeperRecoveryAppliesToCharged": true,
+  "creeperAlwaysDrop": [
+    "minecraft:dirt_path",
+    "minecraft:farmland"
+  ],
+  "creeperSilkTouchDrop": [
+    "#minecraft:dirt",
+    "minecraft:podzol",
+    "minecraft:grass_block",
+    "minecraft:mycelium",
+    "minecraft:stone",
+    "minecraft:andesite",
+    "minecraft:diorite",
+    "minecraft:granite"
   ]
 }
 ```
@@ -158,6 +180,11 @@ does.)
   (all default `false`/vanilla-matching values): Enderman block-griefing
   tuning, entirely independent of everything Phantom-related above - see
   "Enderman tuning" below.
+- **`creeperBlockRecovery`**, `creeperRecoveryAppliesToCharged`,
+  `creeperAlwaysDrop`, and `creeperSilkTouchDrop` (default `false`/`true`
+  and the two lists shown above): Creeper explosion block recovery,
+  independent of both the Phantom and
+  Enderman tuning above - see "Creeper explosion block recovery" below.
 
 ### Neutral targeting
 
@@ -300,6 +327,64 @@ likely per tick to be grabbed than a normal one, on top of whatever
 **Defaults out of the box**: Cactus, Crimson Roots, Warped Roots, Crimson
 Fungus, Warped Fungus, Red Mushroom, and Brown Mushroom start
 `problematic: true`; every other entry starts `false`.
+
+## Creeper explosion block recovery
+
+Vanilla explosions roll a distance-based chance of dropping *nothing* for
+each block they destroy (the further from the blast center, the more
+likely a block just vanishes) - this mod can guarantee a drop instead, for
+specific blocks, specifically when a **Creeper** caused the explosion
+(TNT and other explosions are always left untouched).
+
+- **`creeperBlockRecovery`** (default `false`) - master switch. While
+  `false`, Creeper explosions are 100% unmodified vanilla and everything
+  below is inert.
+- **`creeperRecoveryAppliesToCharged`** (default `true`) - whether the two
+  lists below also apply to a **charged** (lightning-struck) Creeper's
+  explosion. Charged Creepers are rare in normal play and produce a much
+  bigger crater than a regular one; set this `false` if you want those
+  larger holes to stay a real, unrecoverable resource sink while still
+  smoothing over everyday accidental Creeper kills. Only meaningful while
+  `creeperBlockRecovery` is also `true`; a charged Creeper is still
+  detected as the same `Creeper` entity either way; only its explosion
+  radius changes (vanilla doubles it).
+- **`creeperAlwaysDrop`** (default: Dirt Path, Farmland) - blocks that
+  always drop their **normal** item when a Creeper destroys them, with
+  explosion decay bypassed. This is the same drop you'd get from mining
+  the block normally without Silk Touch - e.g. stone still drops
+  cobblestone, dirt path/farmland still drop dirt, just guaranteed instead
+  of a decay-chance roll.
+- **`creeperSilkTouchDrop`** (default: Dirt tag, Podzol, Grass Block,
+  Mycelium, Stone, Andesite, Diorite, Granite) - blocks that drop **as
+  themselves** (as if mined with Silk Touch) when a Creeper destroys them.
+  Takes precedence over `creeperAlwaysDrop` if a block is in both lists.
+  The vanilla `#minecraft:dirt` tag only covers dirt/coarse dirt/rooted
+  dirt, which is why podzol/grass block/mycelium are listed explicitly
+  alongside it.
+
+Each entry in either list is a block ID (`"minecraft:stone"`) or a
+`#`-prefixed block tag (`"#minecraft:dirt"`). A block not listed in either
+array keeps vanilla's own explosion-drop behavior (decay chance and all).
+
+**How it works under the hood**: this replaces the loot-generation part of
+`onExplosionHit` (the vanilla method every block's explosion destruction
+runs through) with a faithful reimplementation of the same vanilla
+logic, deliberately never setting the loot context value that feeds the
+decay roll - so the block's own loot table is asked for its drops exactly
+as usual, just without the chance of getting nothing back. For
+`creeperSilkTouchDrop`, that "ask the loot table" step uses a throwaway,
+never-visible Silk Touch-enchanted pickaxe purely to satisfy the loot
+table's own silk-touch condition (the same condition a real Silk Touch
+pickaxe would satisfy) - this is what makes stone recover as stone instead
+of cobblestone, and keeps working correctly for any future block you add
+to the list, including ones with more complex loot tables (e.g. block
+entity data) that a shortcut like "just spawn the block's own item"
+wouldn't handle correctly.
+
+Each list is parsed into its literal-block and tag lookups once per
+config load/reload rather than re-parsing the raw strings on every single
+exploded block, so `/endertomtuner reload` picks up list changes
+immediately without any extra per-explosion cost.
 
 ### Getting plain vanilla behavior back
 
@@ -472,6 +557,11 @@ the same spawn-attempt cadence vanilla already uses (roughly once every
 Placement/legality checks are the unmodified vanilla routines. Same story
 for the Enderman rolls - one extra `Random.nextDouble()` in place of
 vanilla's own roll, at the same per-tick cadence vanilla already runs it.
+Creeper block recovery only runs per block an explosion was already about
+to destroy (not a new hook into anything per-tick), and checks the
+pre-parsed `creeperAlwaysDrop`/`creeperSilkTouchDrop` lookups rather than
+re-parsing config strings each time - a rare, small-scale event even with
+this mod installed.
 
 ## Troubleshooting
 
@@ -493,6 +583,15 @@ vanilla's own roll, at the same per-tick cadence vanilla already runs it.
   it's `false`, same pattern as `neutralUntilEligible` for Phantoms. Also
   check `/gamerule mobGriefing` is `true` - vanilla gates Enderman
   pickup/place behind it, and this mod doesn't touch that gate.
+- **Creeper explosions still not recovering configured blocks**: check
+  `creeperBlockRecovery` is `true`, and that `/gamerule mobGriefing` is
+  `true` - vanilla only destroys blocks in a Creeper explosion at all
+  while that gamerule is on, so with it off there's nothing for this
+  feature to act on in the first place (this mod doesn't add or remove
+  that gate, it only changes what a block that's already being destroyed
+  drops). Also double check the block/tag spelling in
+  `creeperAlwaysDrop`/`creeperSilkTouchDrop` - an unparseable entry is
+  logged as a warning and silently ignored rather than crashing.
 
 ## License
 

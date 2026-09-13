@@ -3,7 +3,13 @@ package eu.stefanbraun612.smartendertomcontrol;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.LevelResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +21,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /** Loads/holds the active tuning data (global or per-world - see docs/GUIDE.md). */
 public final class SmartEndertomConfig {
@@ -201,6 +209,34 @@ public final class SmartEndertomConfig {
 		 */
 		private List<String> problematicBlock;
 
+		/** Master switch for all Creeper explosion block-recovery tuning below - see docs/GUIDE.md. */
+		public boolean creeperBlockRecovery = false;
+		/**
+		 * Whether the lists below also apply to a charged (powered) Creeper's
+		 * explosion. Defaults to true; set false to let charged Creepers keep
+		 * their full, unrecoverable vanilla crater - see docs/GUIDE.md.
+		 */
+		public boolean creeperRecoveryAppliesToCharged = true;
+		/**
+		 * Blocks that always drop their normal item when a Creeper explosion
+		 * destroys them, bypassing vanilla's distance-based explosion decay.
+		 * Block ID (e.g. "minecraft:farmland") or "#"-prefixed tag.
+		 */
+		public List<String> creeperAlwaysDrop = defaultCreeperAlwaysDrop();
+		/**
+		 * Blocks that drop as themselves (as if Silk Touch mined) when a Creeper
+		 * explosion destroys them. Takes precedence over creeperAlwaysDrop if a
+		 * block is in both lists. Block ID or "#"-prefixed tag.
+		 */
+		public List<String> creeperSilkTouchDrop = defaultCreeperSilkTouchDrop();
+
+		// Parsed once per load/reload in sanitized() instead of re-parsing the
+		// raw strings above on every single exploded block - never serialized.
+		private transient Set<ResourceKey<Block>> creeperAlwaysDropBlocks = new HashSet<>();
+		private transient Set<TagKey<Block>> creeperAlwaysDropTags = new HashSet<>();
+		private transient Set<ResourceKey<Block>> creeperSilkTouchDropBlocks = new HashSet<>();
+		private transient Set<TagKey<Block>> creeperSilkTouchDropTags = new HashSet<>();
+
 		private static Data defaults() {
 			return new Data();
 		}
@@ -238,6 +274,29 @@ public final class SmartEndertomConfig {
 			return entries;
 		}
 
+		private static List<String> defaultCreeperAlwaysDrop() {
+			// Neither has an obtainable item form of its own; their normal drop is dirt.
+			List<String> list = new ArrayList<>();
+			list.add("minecraft:dirt_path");
+			list.add("minecraft:farmland");
+			return list;
+		}
+
+		private static List<String> defaultCreeperSilkTouchDrop() {
+			// The vanilla #minecraft:dirt tag only covers dirt/coarse dirt/rooted
+			// dirt, so podzol/grass_block/mycelium need listing explicitly.
+			List<String> list = new ArrayList<>();
+			list.add("#minecraft:dirt");
+			list.add("minecraft:podzol");
+			list.add("minecraft:grass_block");
+			list.add("minecraft:mycelium");
+			list.add("minecraft:stone");
+			list.add("minecraft:andesite");
+			list.add("minecraft:diorite");
+			list.add("minecraft:granite");
+			return list;
+		}
+
 		private static List<NightTier> defaultTiers() {
 			List<NightTier> tiers = new ArrayList<>();
 			tiers.add(new NightTier(0.10, 1));
@@ -266,6 +325,10 @@ public final class SmartEndertomConfig {
 			copy.gateProblematicBlocks = this.gateProblematicBlocks;
 			copy.problematicBlockChance = this.problematicBlockChance;
 			copy.holdableBlocks = new ArrayList<>(this.holdableBlocks);
+			copy.creeperBlockRecovery = this.creeperBlockRecovery;
+			copy.creeperRecoveryAppliesToCharged = this.creeperRecoveryAppliesToCharged;
+			copy.creeperAlwaysDrop = new ArrayList<>(this.creeperAlwaysDrop);
+			copy.creeperSilkTouchDrop = new ArrayList<>(this.creeperSilkTouchDrop);
 			return copy;
 		}
 
@@ -307,7 +370,67 @@ public final class SmartEndertomConfig {
 				}
 				problematicBlock = null;
 			}
+			if (creeperAlwaysDrop == null) {
+				creeperAlwaysDrop = new ArrayList<>();
+			}
+			if (creeperSilkTouchDrop == null) {
+				creeperSilkTouchDrop = new ArrayList<>();
+			}
+			creeperAlwaysDropBlocks = new HashSet<>();
+			creeperAlwaysDropTags = new HashSet<>();
+			parseBlockEntries(creeperAlwaysDrop, creeperAlwaysDropBlocks, creeperAlwaysDropTags);
+			creeperSilkTouchDropBlocks = new HashSet<>();
+			creeperSilkTouchDropTags = new HashSet<>();
+			parseBlockEntries(creeperSilkTouchDrop, creeperSilkTouchDropBlocks, creeperSilkTouchDropTags);
 			return this;
+		}
+
+		private void parseBlockEntries(List<String> raw, Set<ResourceKey<Block>> blocks, Set<TagKey<Block>> tags) {
+			for (String entry : raw) {
+				if (entry == null || entry.isEmpty()) {
+					continue;
+				}
+				try {
+					if (entry.startsWith("#")) {
+						Identifier id = Identifier.tryParse(entry.substring(1));
+						if (id != null) {
+							tags.add(TagKey.create(Registries.BLOCK, id));
+						}
+					} else {
+						Identifier id = Identifier.tryParse(entry);
+						if (id != null) {
+							blocks.add(ResourceKey.create(Registries.BLOCK, id));
+						}
+					}
+				} catch (RuntimeException e) {
+					LOGGER.warn("[SmartEndertomControl] Ignoring invalid block entry '{}'", entry);
+				}
+			}
+		}
+
+		/** Which drop treatment applies to this block under a Creeper explosion - see docs/GUIDE.md. */
+		public CreeperDropMode creeperModeFor(BlockState state) {
+			if (matchesCreeperSet(state, creeperSilkTouchDropBlocks, creeperSilkTouchDropTags)) {
+				return CreeperDropMode.SILK_TOUCH;
+			}
+			if (matchesCreeperSet(state, creeperAlwaysDropBlocks, creeperAlwaysDropTags)) {
+				return CreeperDropMode.ALWAYS_DROP;
+			}
+			return CreeperDropMode.VANILLA;
+		}
+
+		private static boolean matchesCreeperSet(BlockState state, Set<ResourceKey<Block>> blocks, Set<TagKey<Block>> tags) {
+			for (ResourceKey<Block> key : blocks) {
+				if (state.is(key)) {
+					return true;
+				}
+			}
+			for (TagKey<Block> tag : tags) {
+				if (state.is(tag)) {
+					return true;
+				}
+			}
+			return false;
 		}
 
 		private static double clamp01(double value) {
@@ -346,6 +469,12 @@ public final class SmartEndertomConfig {
 			this.block = block;
 			this.problematic = problematic;
 		}
+	}
+
+	public enum CreeperDropMode {
+		VANILLA,
+		ALWAYS_DROP,
+		SILK_TOUCH
 	}
 
 	public static final class NightTier {
