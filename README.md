@@ -1,6 +1,6 @@
 # Smart Endertom Control
 
-Server-side-only Fabric mod for MC 26.2 with three independent QoL pieces:
+Server-side-only Fabric mod for MC 26.3 with three independent QoL pieces:
 
 - **Phantom tuning** - replaces vanilla's Phantom ("insomnia") spawner with
   a fully tunable version: custom eligibility threshold, per-eligible-night
@@ -21,7 +21,9 @@ All three pieces are off by default and fully independent. See
 [the guide](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)
 for the full field reference.
 
-Current build: **A0.5**, **MC 26.2 only**. Source:
+Current build: **A0.5**, **MC 26.3 only**. Older MC 26.2 builds stay published
+on the [Releases](https://github.com/StefanBraun2001/smart-endertom-control/releases)
+page for anyone still on that version. Source:
 [github.com/StefanBraun2001/smart-endertom-control](https://github.com/StefanBraun2001/smart-endertom-control).
 
 **Distribution: GitHub only.** Following a Modrinth rules change, this mod
@@ -60,11 +62,11 @@ Full config reference, worked examples, and troubleshooting:
 ## Building from source
 
 ```
-cd 26.2
+cd 26.3
 ./gradlew build
 ```
 
-Built jar lands in `26.2/build/libs/`. Needs JDK 25.
+Built jar lands in `26.3/build/libs/`. Needs JDK 25.
 
 ## AI disclosure
 

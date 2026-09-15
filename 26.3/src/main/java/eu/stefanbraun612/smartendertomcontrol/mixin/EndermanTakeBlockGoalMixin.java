@@ -4,7 +4,7 @@ import eu.stefanbraun612.smartendertomcontrol.SmartEndertomConfig;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
-import net.minecraft.world.entity.monster.EnderMan;
+import net.minecraft.world.entity.monster.Enderman;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gamerules.GameRules;
@@ -24,11 +24,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * flagged "problematic" (cactus and the like by default) - see
  * docs/GUIDE.md.
  */
-@Mixin(targets = "net.minecraft.world.entity.monster.EnderMan$EndermanTakeBlockGoal")
+@Mixin(targets = "net.minecraft.world.entity.monster.Enderman$EndermanTakeBlockGoal")
 public abstract class EndermanTakeBlockGoalMixin {
 	@Shadow
 	@Final
-	private EnderMan enderman;
+	private Enderman enderman;
 
 	@Inject(method = "canUse", at = @At("HEAD"), cancellable = true)
 	private void smartendertomcontrol$canUse(CallbackInfoReturnable<Boolean> cir) {
