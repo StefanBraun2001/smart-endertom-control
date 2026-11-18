@@ -16,12 +16,15 @@ Server-side-only Fabric mod for MC 26.3 with three independent QoL pieces:
   their normal item, or drop as themselves (as if Silk Touch mined),
   when a Creeper explosion destroys them - no more filling holes with
   blocks that vanished into thin air.
+- **XP orb collection** - raise or remove the limit of 10 XP orb pickups
+  per second (Java); Bedrock collects all at once. Maximum with a pause is 20 per
+  second; above that only `-1` (no limit) works.
 
-All three pieces are off by default and fully independent. See
+All four pieces are off by default and fully independent. See
 [the guide](https://github.com/StefanBraun2001/smart-endertom-control/blob/master/docs/GUIDE.md)
 for the full field reference.
 
-Current build: **A0.5**, **MC 26.3 only**. Older MC 26.2 builds stay published
+Current build: **A0.6**, **MC 26.3 only**. Older MC 26.2 builds stay published
 on the [Releases](https://github.com/StefanBraun2001/smart-endertom-control/releases)
 page for anyone still on that version. Source:
 [github.com/StefanBraun2001/smart-endertom-control](https://github.com/StefanBraun2001/smart-endertom-control).

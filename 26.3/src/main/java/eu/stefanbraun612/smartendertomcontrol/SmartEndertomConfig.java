@@ -209,7 +209,18 @@ public final class SmartEndertomConfig {
 		 */
 		private List<String> problematicBlock;
 
+		/** Master switch for the XP orb collection tuning below - see docs/GUIDE.md. */
+		public boolean modifyXpOrbCollection = false;
+		/**
+		 * XP orb pickups per second. Vanilla Java is 10 (one orb or orb stack per
+		 * 2 ticks); 20 is the most the tick rate allows with a pause, -1 = no
+		 * limit, every orb in reach is collected at once, like Bedrock - see
+		 * docs/GUIDE.md.
+		 */
+		public int xpOrbCollectionRate = 10;
+
 		/** Master switch for all Creeper explosion block-recovery tuning below - see docs/GUIDE.md. */
+
 		public boolean creeperBlockRecovery = false;
 		/**
 		 * Whether the lists below also apply to a charged (powered) Creeper's
@@ -325,6 +336,8 @@ public final class SmartEndertomConfig {
 			copy.gateProblematicBlocks = this.gateProblematicBlocks;
 			copy.problematicBlockChance = this.problematicBlockChance;
 			copy.holdableBlocks = new ArrayList<>(this.holdableBlocks);
+			copy.modifyXpOrbCollection = this.modifyXpOrbCollection;
+			copy.xpOrbCollectionRate = this.xpOrbCollectionRate;
 			copy.creeperBlockRecovery = this.creeperBlockRecovery;
 			copy.creeperRecoveryAppliesToCharged = this.creeperRecoveryAppliesToCharged;
 			copy.creeperAlwaysDrop = new ArrayList<>(this.creeperAlwaysDrop);
@@ -370,6 +383,10 @@ public final class SmartEndertomConfig {
 				}
 				problematicBlock = null;
 			}
+			if (xpOrbCollectionRate == 0 || xpOrbCollectionRate < -1) {
+				xpOrbCollectionRate = xpOrbCollectionRate == 0 ? 1 : -1;
+			}
+			xpOrbCollectionRate = Math.min(xpOrbCollectionRate, 20);
 			if (creeperAlwaysDrop == null) {
 				creeperAlwaysDrop = new ArrayList<>();
 			}

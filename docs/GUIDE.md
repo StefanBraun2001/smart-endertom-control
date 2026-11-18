@@ -130,6 +130,8 @@ Global file, created with defaults on first run:
     { "block": "minecraft:cactus", "problematic": true, "chance": -1 },
     { "block": "minecraft:sand", "problematic": false, "chance": -1 }
   ],
+  "modifyXpOrbCollection": false,
+  "xpOrbCollectionRate": 10,
   "creeperBlockRecovery": false,
   "creeperRecoveryAppliesToCharged": true,
   "creeperAlwaysDrop": [
@@ -487,6 +489,26 @@ through night 10:**
 }
 ```
 
+## XP orb collection
+
+Vanilla Java lets a player collect one XP orb (or orb stack) every 2 ticks,
+so a big pile of orbs trickles in. Bedrock has no such pause. With
+`modifyXpOrbCollection` on, `xpOrbCollectionRate` replaces that pause:
+
+- `xpOrbCollectionRate` = pickups per second. `10` is the vanilla value,
+  `20` is the fastest paused rate (one per tick), `-1` = no limit (every
+  orb in reach is collected at once). The game works in whole ticks, so the
+  pause is 20 / rate rounded: 7 to 13 all behave like 10, and 14 to 20
+  like 20. Values below -1 become -1, 0 becomes 1, above 20 becomes 20.
+- **Limit:** with a pause, 20 pickups per second (one per tick) is the
+  maximum - 40 or 100 per second are not possible. Anything faster needs
+  `-1`, which is not a rate but "no limit": all orbs in reach are
+  collected in the same tick, as on Bedrock.
+- **Merged orb stacks:** orbs that merge into one stack (e.g. in a mob
+  farm) give up one orb of the stack per pickup in vanilla. So with a
+  numeric rate, a stack of 50 still takes 50 pickups. Only `-1` collects
+  a whole stack at once.
+- `modifyXpOrbCollection` is `false` by default, which leaves vanilla alone.
 ## Reloading config without a restart
 
 `/endertomtuner reload` (requires operator/gamemaster permission) re-reads
